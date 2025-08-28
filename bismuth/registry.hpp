@@ -6,6 +6,8 @@
 #include <vector>
 #include <array>
 #include <cstdint>
+#include <typeindex>
+#include <unordered_map>
 
 // Own libraries
 #include "./bismuth/storage/component_pool.hpp"
@@ -52,17 +54,6 @@ class Registry {
             return id;
         }
 
-        template<typename ComponentName>
-        void EmplaceComponent(size_t entityID, ComponentName&& component) {
-            assert(entityID < mEntities.size() && "Invalid entity ID");
-            
-            auto& pool = GetComponentPool<ComponentName>();
-            const size_t compID = GetPoolID<ComponentName>();
-            
-            pool.AddComponent(entityID, std::forward<ComponentName>(component));
-            mEntities[entityID] |= (1ULL << compID);
-        }
-
         template<typename ComponentName, typename... Args>
         void EmplaceComponent(size_t entityID, Args&&... args) {
             assert(entityID < mEntities.size() && "Invalid entity ID");
@@ -104,12 +95,45 @@ class Registry {
             mEntities[entityID] = 0;
         }
 
+        // Singleton
+        template<typename ComponentName>
+        ComponentName& GetSingleton() {
+            static std::type_index typeIndex = std::type_index(typeid(ComponentName));
+            auto it = mSingletons.find(typeIndex);
+            assert(it != mSingletons.end() && "Singleton not found");
+
+            return *static_cast<ComponentName*>(it->second.get());
+        }
+
+        template<typename ComponentName, typename... Args>
+        void EmplaceSingleton(Args&&... args) {
+            static std::type_index typeIndex = std::type_index(typeid(ComponentName));
+            assert(mSingletons.find(typeIndex) == mSingletons.end() && "Singleton of this type already exists");
+
+            auto ptr = std::make_shared<ComponentName>(std::forward<Args>(args)...);
+            mSingletons[typeIndex] = ptr;
+        }
+
+        template<typename ComponentName>
+        bool HasSingleton() const {
+            static std::type_index typeIndex = std::type_index(typeid(ComponentName));
+            return mSingletons.contains(typeIndex);
+        }
+
+        template<typename ComponentName>
+        void RemoveSingleton() {
+            static std::type_index typeIndex = std::type_index(typeid(ComponentName));
+            mSingletons.erase(typeIndex);
+        }
+
         template<typename... ComponentName>
         ComponentView<ComponentName...> GetView() {
             return ComponentView<ComponentName...>(GetComponentPool<ComponentName>()...);
         }
 
     private:
+        std::unordered_map<std::type_index, std::shared_ptr<void>> mSingletons;
+        
         std::vector<uint64_t> mEntities; // Component bitmask per entity
         std::vector<std::unique_ptr<ISparseSet>> mComponentPool;
 };
