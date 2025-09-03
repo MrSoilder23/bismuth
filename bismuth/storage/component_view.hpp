@@ -21,7 +21,7 @@ class ComponentView {
 
         ComponentView(ComponentPool<ComponentName>&... componentPool) : mComponentPools(componentPool...) {
             std::array<const std::vector<uint32_t>*, sizeof...(ComponentName)> pools = {
-                &componentPool.GetDenseEntities()...
+                &componentPool.getDenseEntities()...
             };
 
             auto minDenseIter = std::min_element(pools.begin(), pools.end(),
@@ -42,11 +42,11 @@ class ComponentView {
 
             Iterator(const ComponentView* view, size_t i, bool advance = true) : componentView(view), index(i) {
                 if(advance) {
-                    AdvanceToValid();
+                    advanceToValid();
                 }
             }
 
-            void AdvanceToValid() {
+            void advanceToValid() {
                 auto& entities = *componentView->mDenseEntities;
 
                 while(index < entities.size()) {
@@ -54,7 +54,7 @@ class ComponentView {
                     // Checks if entity has every component listed
                     bool rightEntity = std::apply
                         ([&](auto&... componentPool){
-                            return (... && componentPool.HasComponent(entityID));
+                            return (... && componentPool.hasComponent(entityID));
                         }, 
                         componentView->mComponentPools
                     );
@@ -67,7 +67,7 @@ class ComponentView {
 
             Iterator& operator++() {
                 ++index;
-                AdvanceToValid();
+                advanceToValid();
                 return *this;
             }
 
@@ -91,7 +91,7 @@ class ComponentView {
                 return std::apply(
                     [&](auto&... componentPool){
                         return std::tuple<size_t, ComponentName&...> {
-                            entity, componentPool.GetComponent(entity)...
+                            entity, componentPool.getComponent(entity)...
                         };
                     },
                     componentView->mComponentPools
@@ -111,11 +111,11 @@ class ComponentView {
             return {this, mDenseEntities->size(), false};
         }
 
-        const size_t SizeHint() {
+        const size_t sizeHint() {
             return mDenseEntities->size();
         }
 
-        const std::vector<uint32_t>* GetSmallestDense() {
+        const std::vector<uint32_t>* getSmallestDense() {
             return mDenseEntities;
         }
 

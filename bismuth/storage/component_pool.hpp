@@ -14,7 +14,7 @@ class ISparseSet {
         using EntityID = uint32_t;
 
         virtual ~ISparseSet() = default;
-        virtual void RemoveComponent(const EntityID& entity) = 0;
+        virtual void removeComponent(const EntityID& entity) = 0;
 };
 
 template<typename ComponentType>
@@ -23,20 +23,20 @@ class ComponentPool : public ISparseSet{
         using EntityID = uint32_t;
         static constexpr uint32_t INVALID_INDEX = std::numeric_limits<uint32_t>::max();
 
-        inline ComponentType& GetComponent(const EntityID& entity) {
-            assert(HasComponent(entity) && "No entity with such component");
+        inline ComponentType& getComponent(const EntityID& entity) {
+            assert(hasComponent(entity) && "No entity with such component");
 
             return mDenseComponents[mComponentLocation[entity]];
         }
 
-        inline bool HasComponent(const EntityID& entity) const noexcept {
+        inline bool hasComponent(const EntityID& entity) const noexcept {
             return entity < mComponentLocation.size() && 
                    mComponentLocation[entity] != INVALID_INDEX;
         }
 
         template<typename... Args>
-        void AddComponent(const EntityID& entity, Args&&... args) {
-            if(HasComponent(entity)) {
+        void addComponent(const EntityID& entity, Args&&... args) {
+            if(hasComponent(entity)) {
                 mDenseComponents[mComponentLocation[entity]] = ComponentType(std::forward<Args>(args)...);
                 return;
             }
@@ -49,8 +49,8 @@ class ComponentPool : public ISparseSet{
             mDenseComponents.push_back(ComponentType(std::forward<Args>(args)...));
             mDenseEntities.push_back(entity);
         }
-        void AddComponent(const EntityID& entity, ComponentType& component) {
-            if(HasComponent(entity)) {
+        void addComponent(const EntityID& entity, ComponentType& component) {
+            if(hasComponent(entity)) {
                 mDenseComponents[mComponentLocation[entity]] = std::move(component);
                 return;
             }
@@ -64,8 +64,8 @@ class ComponentPool : public ISparseSet{
             mDenseEntities.push_back(entity);
         }
 
-        void RemoveComponent(const EntityID& entity) override {
-            if(!HasComponent(entity)) {
+        void removeComponent(const EntityID& entity) override {
+            if(!hasComponent(entity)) {
                 return;
             }
 
@@ -82,27 +82,27 @@ class ComponentPool : public ISparseSet{
             mComponentLocation[entity] = INVALID_INDEX;
         }
 
-        inline void Reserve(const size_t& capacity) {
+        inline void reserve(const size_t& capacity) {
             mComponentLocation.resize(capacity+1, INVALID_INDEX);
             mDenseComponents.reserve(capacity);
             mDenseEntities.reserve(capacity);
         }
 
         // For efficient reading/sending data to gpu
-        const std::vector<ComponentType>& GetDenseComponents() const {
+        const std::vector<ComponentType>& getDenseComponents() const {
             return mDenseComponents;
         }
-        const std::vector<uint32_t>& GetDenseEntities() const noexcept{
+        const std::vector<uint32_t>& getDenseEntities() const noexcept{
             return mDenseEntities;
         }
-        const std::vector<uint32_t>& GetComponentLocations() const noexcept {
+        const std::vector<uint32_t>& getComponentLocations() const noexcept {
             return mComponentLocation;
         }
 
-        std::vector<ComponentType>::iterator ComponentBegin() {
+        std::vector<ComponentType>::iterator componentBegin() {
             return mDenseComponents.begin();
         }
-        std::vector<ComponentType>::iterator ComponentEnd() {
+        std::vector<ComponentType>::iterator componentEnd() {
             return mDenseComponents.end();
         }
 

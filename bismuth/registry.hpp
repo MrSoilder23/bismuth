@@ -10,8 +10,8 @@
 #include <unordered_map>
 
 // Own libraries
-#include "./bismuth/storage/component_pool.hpp"
-#include "./bismuth/storage/component_view.hpp"
+#include "bismuth/storage/component_pool.hpp"
+#include "bismuth/storage/component_view.hpp"
 
 namespace bismuth {
 
@@ -28,14 +28,14 @@ namespace internal_id_gen {
 class Registry {
     public:
         template<typename ComponentName>
-        inline size_t GetPoolID() const {
+        inline size_t getPoolID() const {
             static size_t componentID = internal_id_gen::generate_id<ComponentName>();
             return componentID;
         }
 
         template<typename ComponentName>
-        ComponentPool<ComponentName>& GetComponentPool() {
-            static const size_t type_id = GetPoolID<ComponentName>();
+        ComponentPool<ComponentName>& getComponentPool() {
+            static const size_t type_id = getPoolID<ComponentName>();
 
             if (type_id >= mComponentPool.size()) {
                 mComponentPool.resize(type_id + 1);
@@ -48,48 +48,48 @@ class Registry {
             return *static_cast<ComponentPool<ComponentName>*>(mComponentPool[type_id].get());
         }
 
-        uint32_t CreateEntity() {
+        uint32_t createEntity() {
             const uint32_t id = mEntities.size();
             mEntities.emplace_back();
             return id;
         }
 
         template<typename ComponentName, typename... Args>
-        void EmplaceComponent(size_t entityID, Args&&... args) {
+        void emplaceComponent(size_t entityID, Args&&... args) {
             assert(entityID < mEntities.size() && "Invalid entity ID");
             
-            auto& pool = GetComponentPool<ComponentName>();
-            const size_t compID = GetPoolID<ComponentName>();
+            auto& pool = getComponentPool<ComponentName>();
+            const size_t compID = getPoolID<ComponentName>();
             
-            pool.AddComponent(entityID, std::forward<Args>(args)...);
+            pool.addComponent(entityID, std::forward<Args>(args)...);
             mEntities[entityID] |= (1ULL << compID);
         }
 
         template<typename ComponentName>
-        bool HasComponent(size_t entityID) const {
+        bool hasComponent(size_t entityID) const {
             if (entityID >= mEntities.size()) return false;
-            const size_t compID = GetPoolID<ComponentName>();
+            const size_t compID = getPoolID<ComponentName>();
             return (mEntities[entityID] >> compID) & 1;
         }
 
         template<typename ComponentName>
-        void RemoveComponent(size_t entityID) {
+        void removeComponent(size_t entityID) {
             if (entityID >= mEntities.size()) return;
             
-            auto& pool = GetComponentPool<ComponentName>();
-            const size_t compID = GetPoolID<ComponentName>();
+            auto& pool = getComponentPool<ComponentName>();
+            const size_t compID = getPoolID<ComponentName>();
             
-            pool.RemoveComponent(entityID);
+            pool.removeComponent(entityID);
             mEntities[entityID] &= ~(1ULL << compID);
         }
 
-        void RemoveEntity(size_t entityID) {
+        void removeEntity(size_t entityID) {
             if (entityID >= mEntities.size()) return;
             
             uint64_t mask = mEntities[entityID];
             while (mask) {
                 const size_t idx = std::countr_zero(mask);
-                mComponentPool[idx]->RemoveComponent(entityID);
+                mComponentPool[idx]->removeComponent(entityID);
                 mask &= ~(1ULL << idx);
             }
             mEntities[entityID] = 0;
@@ -97,7 +97,7 @@ class Registry {
 
         // Singleton
         template<typename ComponentName>
-        ComponentName& GetSingleton() {
+        ComponentName& getSingleton() {
             static std::type_index typeIndex = std::type_index(typeid(ComponentName));
             auto it = mSingletons.find(typeIndex);
             assert(it != mSingletons.end() && "Singleton not found");
@@ -106,7 +106,7 @@ class Registry {
         }
 
         template<typename ComponentName, typename... Args>
-        void EmplaceSingleton(Args&&... args) {
+        void emplaceSingleton(Args&&... args) {
             static std::type_index typeIndex = std::type_index(typeid(ComponentName));
             assert(mSingletons.find(typeIndex) == mSingletons.end() && "Singleton of this type already exists");
 
@@ -115,20 +115,20 @@ class Registry {
         }
 
         template<typename ComponentName>
-        bool HasSingleton() const {
+        bool hasSingleton() const {
             static std::type_index typeIndex = std::type_index(typeid(ComponentName));
             return mSingletons.contains(typeIndex);
         }
 
         template<typename ComponentName>
-        void RemoveSingleton() {
+        void removeSingleton() {
             static std::type_index typeIndex = std::type_index(typeid(ComponentName));
             mSingletons.erase(typeIndex);
         }
 
         template<typename... ComponentName>
-        ComponentView<ComponentName...> GetView() {
-            return ComponentView<ComponentName...>(GetComponentPool<ComponentName>()...);
+        ComponentView<ComponentName...> getView() {
+            return ComponentView<ComponentName...>(getComponentPool<ComponentName>()...);
         }
 
     private:
